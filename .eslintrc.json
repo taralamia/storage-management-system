@@ -9,11 +9,14 @@
   },
   "rules": {
     "no-console": "off", // Example: Disable console.log warnings
-    
-    "prefer-const": "off", // Enforce const for unchanged variables
+    "no-var": "error", // Disallows var, use let/const instead
+    "prefer-const": ["error", {
+      "destructuring": "all", // Enforce const for all destructured variables if possible
+      "ignoreReadBeforeAssign": false // Always prefer const if variable isn't reassigned
+    }],
     "quotes": ["error", "single"], // Enforce single quotes
     "semi": ["error", "always"], // Enforce semicolons
-    "prettier/prettier": "error" // Prettier formatting rules
+    "prettier/prettier": ["error", { "singleQuote": true }]// Prettier formatting rules
   },
   "plugins": ["prettier"]
 }
