@@ -1,0 +1,6 @@
+things need to know
+
+ "start": "cross-env NODE_ENV=development nodemon app.js",
+    "prod": "cross-env NODE_ENV=production nodemon app.js"
+
+why we are using it???
