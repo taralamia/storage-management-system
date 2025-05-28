@@ -14,6 +14,7 @@
       "destructuring": "all", // Enforce const for all destructured variables if possible
       "ignoreReadBeforeAssign": false // Always prefer const if variable isn't reassigned
     }],
+    "no-underscore-dangle": ["error", { "allow": ["_id"] }],
     "quotes": ["error", "single"], // Enforce single quotes
     "semi": ["error", "always"], // Enforce semicolons
     "prettier/prettier": ["error", { "singleQuote": true }]// Prettier formatting rules
