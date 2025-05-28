@@ -85,7 +85,7 @@ async function addUser(req, res, next) {
     const verificationCode = generateVerificationCode();
     const verificationCodeExpires = Date.now() + 24 * 60 * 60 * 1000;
     const newUser = new User({
-      username: req.body.name,
+      username: req.body.username,
       email: req.body.email,
       password: req.body.password,
       verificationCode,
@@ -225,7 +225,7 @@ function googleAuthCallback(req, res, next) {
   })(req, res, next);
 }
 // forget and reset password
-async function forgotPassword(req, res, next) {
+async function forgetPassword(req, res, next) {
   try {
     const { email } = req.body;
 
@@ -325,6 +325,6 @@ module.exports = {
   googleAuth,
   googleAuthCallback,
   postLogin,
-  forgotPassword,
+  forgetPassword,
   resetPassword,
 };

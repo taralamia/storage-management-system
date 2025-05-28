@@ -11,7 +11,7 @@ const {
   googleAuth,
   googleAuthCallback,
   postLogin,
-  forgotPassword,
+  forgetPassword,
   resetPassword,
 } = require('../controllers/loginController');
 
@@ -24,7 +24,7 @@ router.get('/auth/google/callback', googleAuthCallback);
 //  POST route for login functionality
 router.post('/postLogin', postLogin);
 // forget password
-router.post('/forget-password', forgotPassword);
+router.post('/forget-password', forgetPassword);
 // reset password
 router.post('/reset-password', resetPassword);
 module.exports = router;
