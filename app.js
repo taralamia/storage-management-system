@@ -13,7 +13,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 // const moment = require('moment');
 const express = require('express');
-const loginRouter = require('./routes/loginRouter');
+const authRouter = require('./routes/authRouter');
 // const favoriteRouter = require('./routes/favoriteRouter');
 // const homeRouter = require('./routes/homeRouter');
 // const calendarRouter = require('./routes/calendarRouter');
@@ -52,16 +52,13 @@ app.use((req, res, next) => {
   next();
 }); // for debugging purpose
 
-// set view engine
-// here's the view code
-
 // set static folder (public folder)
 // app.use(express.static(path.join(__dirname, 'public')));
 
 // parse cookies
 app.use(cookieParser(process.env.COOKIE_SECRET));
 // routing setup
-app.use('/login', loginRouter);
+app.use('/api/v1/auth', authRouter);
 // app.use('/home', homeRouter);
 // app.use('/favorite', favoriteRouter);
 /*

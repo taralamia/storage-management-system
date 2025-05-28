@@ -7,12 +7,12 @@ const peopleSchema = mongoose.Schema(
       type: String,
       required: false,
       trim: true,
-    }, // regular signup
+    },
     googleId: {
       type: String,
       unique: true,
       sparse: true,
-    }, // Google sign-up
+    },
     email: {
       type: String,
       required: true,
@@ -22,7 +22,9 @@ const peopleSchema = mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required() {
+        return !this.googleId;
+      }, // Only required for email signup
     },
     avatar: {
       type: [String],
@@ -46,25 +48,34 @@ const peopleSchema = mongoose.Schema(
     timestamps: true,
   },
 );
+
+// Proper async pre-save hook
 peopleSchema.pre('save', async function (next) {
-  if (!this.googleId && !this.password) {
-    return next(new Error('Either Google ID or Password is required'));
-  }
-  // Hash the password if it's being modified or is new
-  if (this.isModified('password') || this.isNew) {
-    try {
+  try {
+    // Validation
+    const isEmailSignup = !this.googleId;
+    const isGoogleSignup = !!this.googleId;
+
+    if (isEmailSignup && !this.password) {
+      throw new Error('Password is required for email signup');
+    }
+
+    if (!isEmailSignup && !isGoogleSignup) {
+      throw new Error('Either Google ID or Password must be provided');
+    }
+
+    // Password hashing
+    if ((this.isModified('password') || this.isNew) && this.password) {
       const salt = await bcrypt.genSalt(10);
       this.password = await bcrypt.hash(this.password, salt);
       this.isPasswordHashed = true;
-      next();
-    } catch (error) {
-      next(error);
     }
-  } else {
+
     next();
+  } catch (error) {
+    next(error);
   }
 });
 
 const People = mongoose.model('People', peopleSchema, 'people');
-
 module.exports = People;
