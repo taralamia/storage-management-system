@@ -13,7 +13,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 // const moment = require('moment');
 const express = require('express');
-const authRouter = require('./routes/authRouter');
+const route = require('./routes/route');
 // const favoriteRouter = require('./routes/favoriteRouter');
 // const homeRouter = require('./routes/homeRouter');
 // const calendarRouter = require('./routes/calendarRouter');
@@ -58,7 +58,7 @@ app.use((req, res, next) => {
 // parse cookies
 app.use(cookieParser(process.env.COOKIE_SECRET));
 // routing setup
-app.use('/api/v1/auth', authRouter);
+app.use('/api', route);
 // app.use('/home', homeRouter);
 // app.use('/favorite', favoriteRouter);
 /*
