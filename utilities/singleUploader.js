@@ -3,6 +3,13 @@ const fs = require('fs');
 const createError = require('http-errors');
 const multer = require('multer');
 
+/**
+ * @param {string} base_folder_path - usually "public"
+ * @param {string[]} allowed_file_types - e.g., ["image/jpeg"]
+ * @param {number} max_file_size - max size in bytes (e.g., 5MB = 5000000)
+ * @param {string} error_msg - validation error message
+ * @returns multer middleware
+ */
 function uploader(
   base_folder_path,
   allowed_file_types,
@@ -14,27 +21,31 @@ function uploader(
 
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      let { folderName } = req.body;
+      const { folderName } = req.body;
+      let folderPath;
 
-      if (!folderName) {
-        if (['image/jpeg', 'image/jpg', 'image/png'].includes(file.mimetype)) {
-          folderName = 'images';
-        } else if (file.mimetype === 'application/pdf') {
-          folderName = 'pdf';
-        } else if (
-          ['text/plain', 'application/msword'].includes(file.mimetype)
-        ) {
-          folderName = 'notes';
+      if (folderName) {
+        folderPath = path.join(resolvedBasePath, 'folders', folderName); // User-defined folders
+      } else {
+        const mime = file.mimetype;
+
+        if (['image/jpeg', 'image/jpg', 'image/png'].includes(mime)) {
+          folderPath = path.join(resolvedBasePath, 'images');
+        } else if (mime === 'application/pdf') {
+          folderPath = path.join(resolvedBasePath, 'pdf');
+        } else if (['text/plain', 'application/msword'].includes(mime)) {
+          folderPath = path.join(resolvedBasePath, 'notes');
         } else {
           return cb(
-            new Error('Unsupported file type and no folder name provided.'),
+            createError('Unsupported file type and no folder name provided.'),
           );
         }
       }
 
-      const folderPath = path.join(resolvedBasePath, folderName);
+      // Save the resolved folder path for later use
       req.folderPath1 = folderPath;
 
+      // Ensure folder exists
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
       }
@@ -54,11 +65,9 @@ function uploader(
     },
   });
 
-  const upload = multer({
+  return multer({
     storage,
-    limits: {
-      fileSize: max_file_size,
-    },
+    limits: { fileSize: max_file_size },
     fileFilter: (req, file, cb) => {
       if (allowed_file_types.includes(file.mimetype)) {
         cb(null, true);
@@ -67,8 +76,6 @@ function uploader(
       }
     },
   });
-
-  return upload;
 }
 
 module.exports = uploader;
