@@ -53,7 +53,7 @@ app.use((req, res, next) => {
 }); // for debugging purpose
 
 // set static folder (public folder)
-// app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // parse cookies
 app.use(cookieParser(process.env.COOKIE_SECRET));
