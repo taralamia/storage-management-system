@@ -1,3 +1,5 @@
 node_modules
 strg-docs.txt
 .env
+logs/
+/public/

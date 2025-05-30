@@ -14,11 +14,6 @@ const cookieParser = require('cookie-parser');
 // const moment = require('moment');
 const express = require('express');
 const route = require('./routes/route');
-// const favoriteRouter = require('./routes/favoriteRouter');
-// const homeRouter = require('./routes/homeRouter');
-// const calendarRouter = require('./routes/calendarRouter');
-// const profileRouter = require('./routes/profileRouter');
-
 // internal imports
 
 const {
@@ -53,7 +48,7 @@ app.use((req, res, next) => {
 }); // for debugging purpose
 
 // set static folder (public folder)
-// app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, process.env.UPLOADS_BASE)));
 
 // parse cookies
 app.use(cookieParser(process.env.COOKIE_SECRET));
