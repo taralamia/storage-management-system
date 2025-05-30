@@ -10,6 +10,8 @@ const googleRoutes = require('./auth/googleRoutes');
 const folderRoutes = require('./storage/folderRoutes');
 const infoRoutes = require('./storage/infoRoutes');
 const fileRoutes = require('./storage/fileRoutes');
+
+const fileOpsRoutes = require('./storage/fileOpsRoutes');
 // Mount under /v1/auth
 router.use('/v1/auth', localRoutes);
 router.use('/v1/auth', googleRoutes);
@@ -18,4 +20,5 @@ router.use('/v1/auth', googleRoutes);
 router.use('/v1/storage', fileRoutes);
 router.use('/v1/storage', folderRoutes);
 router.use('/v1/storage', infoRoutes);
+router.use('/v1/storage',fileOpsRoutes);
 module.exports = router;

@@ -36,9 +36,47 @@ async function uploadPdf(req, res, next) {
 async function uploadNotes(req, res, next) {
   return uploadHandler(req, res, next, 'Note');
 }
+async function toggleFavorite(req, res, next) {
+  try {
+    const { itemId, itemType, applyToContents } = req.body;
+    const userId = req.user._id;
 
+    if (!itemId || !itemType) {
+      return next(createError(400, 'itemId and itemType are required'));
+    }
+
+    const updatedItem = await storageService.toggleFavoriteItem({
+      userId,
+      itemId,
+      itemType,
+      applyToContents,
+    });
+    res.status(200).json({
+      message: `Favorite status updated for ${itemType}`,
+      item: updatedItem,
+    });
+  } catch (err) {
+    next(createError(500, 'Failed to toggle favorite status'));
+  }
+}
+
+async function getFavoriteItems(req, res, next) {
+  try {
+    const userId = req.user._id;
+    const favorites = await storageService.getFavorites(userId);
+
+    res.status(200).json({
+      message: 'Favorite items fetched successfully',
+      favorites,
+    });
+  } catch (err) {
+    next(createError(500, 'Failed to fetch favorite items'));
+  }
+}
 module.exports = {
   uploadImage,
   uploadPdf,
   uploadNotes,
+  toggleFavorite,
+  getFavoriteItems,
 };
