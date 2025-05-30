@@ -2,7 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const passport = require('passport');
-require('../config/passport');
+const createError = require('http-errors');
 const User = require('../models/People');
 const transporter = require('../middlewares/users/mailer');
 require('dotenv').config();
@@ -15,15 +15,11 @@ async function registerUser(body) {
   const { username, email, password, confirmPassword } = body;
 
   if (password !== confirmPassword) {
-    const error = new Error('Passwords do not match');
-    error.status = 400;
-    throw error;
+    throw createError(400, 'Passwords do not match');
   }
 
   if (!password || password.length === 0) {
-    const error = new Error('Password is required');
-    error.status = 400;
-    throw error;
+    throw createError(400, 'Password is required');
   }
 
   const verificationCode = generateVerificationCode();
@@ -62,23 +58,11 @@ async function registerUser(body) {
 
 async function verifyEmail({ email, code }) {
   const user = await User.findOne({ email });
-  if (!user) {
-    const error = new Error('User not found.');
-    error.status = 400;
-    throw error;
-  }
-
-  if (user.verificationCode !== code) {
-    const error = new Error('Invalid verification code.');
-    error.status = 400;
-    throw error;
-  }
-
-  if (user.verificationCodeExpires < Date.now()) {
-    const error = new Error('Verification code expired.');
-    error.status = 400;
-    throw error;
-  }
+  if (!user) throw createError(400, 'User not found.');
+  if (user.verificationCode !== code)
+    throw createError(400, 'Invalid verification code.');
+  if (user.verificationCodeExpires < Date.now())
+    throw createError(400, 'Verification code expired.');
 
   user.verificationCode = undefined;
   user.verificationCodeExpires = undefined;
@@ -88,25 +72,13 @@ async function verifyEmail({ email, code }) {
 }
 
 async function login({ email, password }) {
-  if (!email) {
-    const error = new Error('Email is required');
-    error.status = 400;
-    throw error;
-  }
+  if (!email) throw createError(400, 'Email is required');
 
   const user = await User.findOne({ email });
-  if (!user) {
-    const error = new Error('User not found. Please sign up.');
-    error.status = 400;
-    throw error;
-  }
+  if (!user) throw createError(400, 'User not found. Please sign up.');
 
   const isPasswordValid = await bcrypt.compare(password, user.password);
-  if (!isPasswordValid) {
-    const error = new Error('Invalid credentials.');
-    error.status = 400;
-    throw error;
-  }
+  if (!isPasswordValid) throw createError(400, 'Invalid credentials.');
 
   const payload = { id: user._id, email: user.email, role: user.role };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
@@ -150,11 +122,7 @@ function handleGoogleAuthCallback(req, res, next) {
 
 async function forgetPassword({ email }) {
   const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) {
-    const error = new Error('User not found.');
-    error.status = 400;
-    throw error;
-  }
+  if (!user) throw createError(400, 'User not found.');
 
   const verificationCode = generateVerificationCode();
   user.verificationCode = verificationCode;
@@ -183,11 +151,7 @@ async function resetPassword({ email, verificationCode, password }) {
     verificationCodeExpires: { $gt: Date.now() },
   });
 
-  if (!user) {
-    const error = new Error('Invalid or expired code.');
-    error.status = 400;
-    throw error;
-  }
+  if (!user) throw createError(400, 'Invalid or expired code.');
 
   const hashedPassword = await bcrypt.hash(password, 10);
   user.password = hashedPassword;

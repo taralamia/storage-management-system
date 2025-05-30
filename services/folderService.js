@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const createError = require('http-errors');
 const Folder = require('../models/Folder');
 
 const rootDir = path.resolve(__dirname, '..');
@@ -10,7 +11,7 @@ async function createUserFolder(userId, folderName) {
 
   const existing = await Folder.findOne({ userId, folderName });
   if (existing) {
-    throw new Error('Folder already exists');
+    throw createError(400, 'Folder already exists');
   }
 
   if (!fs.existsSync(folderPath)) {

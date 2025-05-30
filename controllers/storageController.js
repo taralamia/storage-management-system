@@ -1,74 +1,40 @@
+const createError = require('http-errors');
 const storageService = require('../services/storageService');
 
+async function uploadHandler(req, res, next, fileType) {
+  try {
+    const userId = req.user._id;
+
+    if (!req.files || req.files.length === 0) {
+      return next(createError(400, 'No files uploaded'));
+    }
+
+    const savedFiles = await storageService.handleFileUpload({
+      userId,
+      files: req.files,
+      folderPath: req.folderPath1,
+    });
+
+    res.status(200).json({
+      message: `${fileType} file(s) uploaded successfully!`,
+      files: savedFiles,
+    });
+  } catch (err) {
+    // This automatically logs & formats error in errorHandler
+    next(createError(500, `Failed to upload ${fileType} file(s)`));
+  }
+}
+
 async function uploadImage(req, res, next) {
-  try {
-    const userId = req.user._id;
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded' });
-    }
-
-    // Pass control to service
-    const savedFiles = await storageService.handleFileUpload({
-      userId,
-      files: req.files,
-      folderPath: req.folderPath1,
-    });
-
-    res.status(200).json({
-      message: 'Image(s) uploaded successfully!',
-      files: savedFiles,
-    });
-  } catch (error) {
-    console.error('Upload error:', error.message);
-    res.status(500).json({ error: 'Failed to upload image(s)' });
-  }
+  return uploadHandler(req, res, next, 'Image');
 }
+
 async function uploadPdf(req, res, next) {
-  try {
-    const userId = req.user._id;
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded' });
-    }
-
-    const savedFiles = await storageService.handleFileUpload({
-      userId,
-      files: req.files,
-      folderPath: req.folderPath1,
-    });
-
-    res.status(200).json({
-      message: 'PDF(s) uploaded successfully!',
-      files: savedFiles,
-    });
-  } catch (error) {
-    console.error('Upload PDF error:', error.message);
-    res.status(500).json({ error: 'Failed to upload PDF(s)' });
-  }
+  return uploadHandler(req, res, next, 'PDF');
 }
+
 async function uploadNotes(req, res, next) {
-  try {
-    const userId = req.user._id;
-
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: 'No files uploaded' });
-    }
-
-    const savedFiles = await storageService.handleFileUpload({
-      userId,
-      files: req.files,
-      folderPath: req.folderPath1,
-    });
-
-    res.status(200).json({
-      message: 'Note file(s) uploaded successfully!',
-      files: savedFiles,
-    });
-  } catch (error) {
-    console.error('Upload Notes error:', error.message);
-    res.status(500).json({ error: 'Failed to upload note file(s)' });
-  }
+  return uploadHandler(req, res, next, 'Note');
 }
 
 module.exports = {

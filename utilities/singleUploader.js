@@ -1,56 +1,18 @@
 const path = require('path');
-const fs = require('fs');
-const createError = require('http-errors');
 const multer = require('multer');
+const createError = require('http-errors');
+const resolveFolderPath = require('../utils/folderResolver');
 
-/**
- * @param {string} base_folder_path - usually "public"
- * @param {string[]} allowed_file_types - e.g., ["image/jpeg"]
- * @param {number} max_file_size - max size in bytes (e.g., 5MB = 5000000)
- * @param {string} error_msg - validation error message
- * @returns multer middleware
- */
-function uploader(
-  base_folder_path,
-  allowed_file_types,
-  max_file_size,
-  error_msg,
-) {
-  const rootDir = path.resolve(__dirname, '..');
-  const resolvedBasePath = path.join(rootDir, base_folder_path);
-
+function uploader(baseFolderPath, allowedFileTypes, maxFileSize, errorMsg) {
   const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-      const { folderName } = req.body;
-      let folderPath;
-
-      if (folderName) {
-        folderPath = path.join(resolvedBasePath, 'folders', folderName); // User-defined folders
-      } else {
-        const mime = file.mimetype;
-
-        if (['image/jpeg', 'image/jpg', 'image/png'].includes(mime)) {
-          folderPath = path.join(resolvedBasePath, 'images');
-        } else if (mime === 'application/pdf') {
-          folderPath = path.join(resolvedBasePath, 'pdf');
-        } else if (['text/plain', 'application/msword'].includes(mime)) {
-          folderPath = path.join(resolvedBasePath, 'notes');
-        } else {
-          return cb(
-            createError('Unsupported file type and no folder name provided.'),
-          );
-        }
+      try {
+        const folderPath = resolveFolderPath(file.mimetype, req.body.folderName);
+        req.folderPath1 = folderPath;
+        cb(null, folderPath);
+      } catch (err) {
+        cb(err);
       }
-
-      // Save the resolved folder path for later use
-      req.folderPath1 = folderPath;
-
-      // Ensure folder exists
-      if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath, { recursive: true });
-      }
-
-      cb(null, folderPath);
     },
 
     filename: (req, file, cb) => {
@@ -67,12 +29,12 @@ function uploader(
 
   return multer({
     storage,
-    limits: { fileSize: max_file_size },
+    limits: { fileSize: maxFileSize },
     fileFilter: (req, file, cb) => {
-      if (allowed_file_types.includes(file.mimetype)) {
+      if (allowedFileTypes.includes(file.mimetype)) {
         cb(null, true);
       } else {
-        cb(createError(error_msg));
+        cb(createError(errorMsg));
       }
     },
   });

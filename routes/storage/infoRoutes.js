@@ -5,7 +5,7 @@ const authMiddleware = require('../../middlewares/users/authMiddleware');
 const {
   getStorageInfo,
   getRecentItems,
-} = require('../../controllers/getStorageInfo');
+} = require('../../controllers/storageInfoController');
 
 router.get('/info/usage', authMiddleware, getStorageInfo);
 router.get('/info/recent', authMiddleware, getRecentItems);

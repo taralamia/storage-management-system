@@ -1,22 +1,34 @@
 const createError = require('http-errors');
+const logger = require('../../utils/logger');
 
-// 404 not found handler
+// 404 handler
 function notFoundHandler(req, res, next) {
   next(createError(404, 'Your requested content was not found!'));
 }
-// default error handler
+
+// Centralized error handler
 function errorHandler(err, req, res, next) {
-  // Set default status code
   const statusCode = err.status || 500;
-  res.locals.error =
-    process.env.NODE_ENV === 'development' ? err : { message: err.message };
-  // json response
+  const message = err.message || 'Internal Server Error';
+
+  // Log the error (always in file, also to console in development)
+  logger.error({
+    message,
+    statusCode,
+    method: req.method,
+    url: req.originalUrl,
+    stack: err.stack,
+    time: new Date().toISOString(),
+  });
+
+  // Send JSON response
   res.status(statusCode).json({
     success: false,
-    message: err.message || 'Internal server error',
-    // stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
   });
 }
+
 module.exports = {
   notFoundHandler,
   errorHandler,

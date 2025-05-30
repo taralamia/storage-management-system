@@ -5,7 +5,7 @@ const People = require('./People');
 const storageFileSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: People, // Reference to the People model
+    ref: 'People', // Reference to the People model
     required: true,
   },
   fileName: {
@@ -33,7 +33,6 @@ const storageFileSchema = new mongoose.Schema({
     default: Date.now,
   },
   isFavorite: {
-    // Added for marking a file as favorite
     type: Boolean,
     default: false,
   },
@@ -50,7 +49,7 @@ const storageFileSchema = new mongoose.Schema({
   shareLink: {
     type: String,
     unique: true, // Unique shareable link
-    sparse: true, // Allow null values
+    sparse: true,
   },
   permissions: {
     type: String,
