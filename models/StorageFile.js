@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const People = require('./People');
-// const Folder = require('./folderUpload');
 
 const storageFileSchema = new mongoose.Schema({
   userId: {
