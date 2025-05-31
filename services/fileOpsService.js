@@ -3,11 +3,20 @@ const path = require('path');
 const createError = require('http-errors');
 const StorageFile = require('../models/StorageFile');
 const Folder = require('../models/Folder');
+const { findActualFileName } = require('../utils/fileHelper');
 
+const baseStoragePath = path.resolve(__dirname, '../public');
+function isPathInsideBase(base, target) {
+  const relative = path.relative(base, path.resolve(target));
+  return !relative.startsWith('..') && !path.isAbsolute(relative);
+}
 async function deleteItem({ userId, itemId }) {
   const folder = await Folder.findOne({ _id: itemId, userId });
   if (folder) {
-    const files = await StorageFile.find({ folderPath: folder.folderPath });
+    const files = await StorageFile.find({
+      folderPath: folder.folderPath,
+      userId,
+    });
 
     await Promise.all(
       files.map((file) => {
@@ -17,7 +26,7 @@ async function deleteItem({ userId, itemId }) {
       }),
     );
 
-    await StorageFile.deleteMany({ folderPath: folder.folderPath });
+    await StorageFile.deleteMany({ folderPath: folder.folderPath, userId });
 
     if (fs.existsSync(folder.folderPath)) {
       fs.rmSync(folder.folderPath, { recursive: true });
@@ -38,37 +47,42 @@ async function deleteItem({ userId, itemId }) {
 
   throw createError(404, 'Item not found');
 }
+function copyFolderRecursive(src, dest) {
+  if (!fs.existsSync(dest)) {
+    fs.mkdirSync(dest, { recursive: true });
+  }
+
+  fs.readdirSync(src, { withFileTypes: true }).forEach((entry) => {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyFolderRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  });
+}
+
 async function copyItem({ userId, itemId, itemType, targetFolderPath }) {
+  const safeTargetPath = targetFolderPath || baseStoragePath;
+
+  if (!isPathInsideBase(baseStoragePath, safeTargetPath)) {
+    throw createError(400, 'Invalid or unsafe folder path');
+  }
+
   if (itemType === 'file') {
     const file = await StorageFile.findOne({ _id: itemId, userId });
     if (!file) throw createError(404, 'File not found');
 
-    const folderFiles = fs.readdirSync(file.folderPath);
-    const baseName = path
-      .basename(file.fileName, path.extname(file.fileName))
-      .toLowerCase()
-      .replace(/\s+/g, '-');
-
-    const matchedFile = folderFiles.find((f) => {
-      const fileNameWithoutExt = path
-        .basename(f, path.extname(f))
-        .toLowerCase();
-      return fileNameWithoutExt.startsWith(baseName);
-    });
-
+    const matchedFile = findActualFileName(file.folderPath, file.fileName);
     if (!matchedFile) {
-      throw createError(
-        404,
-        `Matching file not found in folder: ${file.folderPath}`,
-      );
+      throw createError(404, `File not found on disk for ${file.fileName}`);
     }
 
     const actualFilePath = path.join(file.folderPath, matchedFile);
     const newFileName = `Copy of ${file.fileName}`;
-    const newFilePath = path.join(
-      targetFolderPath || file.folderPath,
-      newFileName,
-    );
+    const newFilePath = path.join(safeTargetPath, newFileName);
 
     fs.copyFileSync(actualFilePath, newFilePath);
 
@@ -77,7 +91,7 @@ async function copyItem({ userId, itemId, itemType, targetFolderPath }) {
       _id: undefined,
       fileName: newFileName,
       filePath: newFilePath,
-      folderPath: targetFolderPath || file.folderPath,
+      folderPath: safeTargetPath,
       originalFileId: file._id,
     });
 
@@ -95,7 +109,11 @@ async function copyItem({ userId, itemId, itemType, targetFolderPath }) {
       newFolderName,
     );
 
-    fs.mkdirSync(newFolderPath, { recursive: true });
+    if (!isPathInsideBase(baseStoragePath, newFolderPath)) {
+      throw createError(400, 'Unsafe folder path');
+    }
+
+    copyFolderRecursive(folder.folderPath, newFolderPath);
 
     const newFolder = new Folder({
       ...folder.toObject(),
@@ -103,30 +121,14 @@ async function copyItem({ userId, itemId, itemType, targetFolderPath }) {
       folderName: newFolderName,
       folderPath: newFolderPath,
     });
-
     await newFolder.save();
 
     const files = await StorageFile.find({ folderPath: folder.folderPath });
 
     await Promise.all(
       files.map(async (file) => {
-        const folderFiles = fs.readdirSync(file.folderPath);
-        const baseName = path
-          .basename(file.fileName, path.extname(file.fileName))
-          .toLowerCase()
-          .replace(/\s+/g, '-');
-
-        const matchedFile = folderFiles.find((f) => {
-          const fileNameWithoutExt = path
-            .basename(f, path.extname(f))
-            .toLowerCase();
-          return fileNameWithoutExt.startsWith(baseName);
-        });
-
-        if (!matchedFile) {
-          console.warn(`Skipping file not found on disk: ${file.fileName}`);
-          return;
-        }
+        const matchedFile = findActualFileName(file.folderPath, file.fileName);
+        if (!matchedFile) return;
 
         const actualFilePath = path.join(file.folderPath, matchedFile);
         const newFilePath = path.join(newFolderPath, file.fileName);
@@ -155,33 +157,17 @@ async function renameItem({ userId, itemId, itemType, newName }) {
     const file = await StorageFile.findOne({ _id: itemId, userId });
     if (!file) throw createError(404, 'File not found');
 
-    const { folderPath } = file;
     const ext = path.extname(file.fileName);
     const newFileName = newName.endsWith(ext) ? newName : newName + ext;
 
-    // Handle case where file name on disk has timestamp/slug
-    const baseName = path
-      .basename(file.fileName, ext)
-      .toLowerCase()
-      .replace(/\s+/g, '-');
+    const matchedFileName = findActualFileName(file.folderPath, file.fileName);
+    if (!matchedFileName) throw createError(404, 'File not found on disk');
 
-    const folderFiles = fs.readdirSync(folderPath);
-    const matchedFileName = folderFiles.find((f) => {
-      const name = path.basename(f, path.extname(f)).toLowerCase();
-      return name.startsWith(baseName);
-    });
+    const actualFilePath = path.join(file.folderPath, matchedFileName);
+    const newFilePath = path.join(file.folderPath, newFileName);
 
-    if (!matchedFileName) {
-      throw createError(404, 'File not found in folder');
-    }
-
-    const actualFilePath = path.join(folderPath, matchedFileName);
-    const newFilePath = path.join(folderPath, newFileName);
-
-    // Rename file on disk
     fs.renameSync(actualFilePath, newFilePath);
 
-    // Update in DB
     file.fileName = newFileName;
     file.filePath = newFilePath;
     await file.save();
@@ -193,29 +179,50 @@ async function renameItem({ userId, itemId, itemType, newName }) {
     const folder = await Folder.findOne({ _id: itemId, userId });
     if (!folder) throw createError(404, 'Folder not found');
 
-    const newFolderPath = path.join(path.dirname(folder.folderPath), newName);
-    fs.renameSync(folder.folderPath, newFolderPath);
-
-    const files = await StorageFile.find({ folderPath: folder.folderPath });
-
-    await Promise.all(
-      files.map(async (file) => {
-        file.folderPath = newFolderPath;
-        file.filePath = path.join(newFolderPath, path.basename(file.filePath));
-        await file.save();
-      }),
-    );
+    const oldFolderPath = folder.folderPath;
+    const newFolderPath = path.join(path.dirname(oldFolderPath), newName);
+    fs.renameSync(oldFolderPath, newFolderPath);
 
     folder.folderName = newName;
     folder.folderPath = newFolderPath;
     await folder.save();
 
-    return { message: 'Folder renamed successfully', item: folder };
+    const allFiles = await StorageFile.find({
+      userId,
+      filePath: { $regex: `^${oldFolderPath.replace(/\\/g, '\\\\')}` },
+    });
+
+    await Promise.all(
+      allFiles.map(async (file) => {
+        file.filePath = file.filePath.replace(oldFolderPath, newFolderPath);
+        file.folderPath = file.folderPath.replace(oldFolderPath, newFolderPath);
+        await file.save();
+      }),
+    );
+
+    const nestedFolders = await Folder.find({
+      userId,
+      folderPath: { $regex: `^${oldFolderPath.replace(/\\/g, '\\\\')}` },
+    });
+
+    await Promise.all(
+      nestedFolders.map(async (subFolder) => {
+        subFolder.folderPath = subFolder.folderPath.replace(
+          oldFolderPath,
+          newFolderPath,
+        );
+        await subFolder.save();
+      }),
+    );
+
+    return {
+      message: 'Folder renamed successfully (with nested items)',
+      item: folder,
+    };
   }
 
   throw createError(400, 'Invalid itemType');
 }
-
 module.exports = {
   deleteItem,
   copyItem,

@@ -7,8 +7,8 @@ const {
   renameItem,
 } = require('../../controllers/fileOpsController');
 
-router.delete('/:id/delete', authMiddleware, deleteItem);
-router.post('/:id/copy', authMiddleware, copyItem);
-router.put('/:id/rename', authMiddleware, renameItem);
+router.delete('/delete/:id', authMiddleware, deleteItem);
+router.post('/copy/:id', authMiddleware, copyItem);
+router.put('/rename/:id', authMiddleware, renameItem);
 
 module.exports = router;

@@ -56,7 +56,7 @@ async function toggleFavorite(req, res, next) {
       item: updatedItem,
     });
   } catch (err) {
-    next(createError(500, 'Failed to toggle favorite status'));
+    next(err);
   }
 }
 
@@ -70,7 +70,7 @@ async function getFavoriteItems(req, res, next) {
       favorites,
     });
   } catch (err) {
-    next(createError(500, 'Failed to fetch favorite items'));
+    next(err);
   }
 }
 module.exports = {

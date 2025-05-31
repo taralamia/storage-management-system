@@ -1,6 +1,5 @@
 const createError = require('http-errors');
 const fileOpsService = require('../services/fileOpsService');
-const Folder = require('../models/Folder');
 
 async function deleteItem(req, res, next) {
   try {
@@ -17,6 +16,7 @@ async function deleteItem(req, res, next) {
     next(err);
   }
 }
+
 async function copyItem(req, res, next) {
   try {
     const { id: itemId } = req.params;
